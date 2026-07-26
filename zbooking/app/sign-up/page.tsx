@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { signUp } from "@/app/lib/auth";
 
 function SSOButton({
   provider,
@@ -10,8 +13,31 @@ function SSOButton({
   provider: string;
   icon: React.ReactNode;
 }) {
+  const [loading, setLoading] = useState(false);
+
+  async function handleClick() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/sign-in/social", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: provider.toLowerCase() }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch {
+      setLoading(false);
+    }
+  }
+
   return (
-    <button className="flex h-11 w-full items-center justify-center gap-2 border-2 border-[#171717] bg-white font-sans text-sm font-bold tracking-tight transition-colors hover:bg-[#171717]/5">
+    <button
+      onClick={handleClick}
+      disabled={loading}
+      className="flex h-11 w-full items-center justify-center gap-2 border-2 border-[#171717] bg-white font-sans text-sm font-bold tracking-tight transition-colors hover:bg-[#171717]/5 disabled:opacity-50"
+    >
       {icon}
       {provider}
     </button>
@@ -19,6 +45,29 @@ function SSOButton({
 }
 
 export default function SignUpPage() {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      await signUp({ name, email, password });
+      router.push("/");
+    } catch (err: unknown) {
+      const authErr = err as { message?: string };
+      setError(authErr.message || "Failed to create account");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <main className="flex flex-1 items-center justify-center px-6 py-16">
@@ -30,30 +79,47 @@ export default function SignUpPage() {
             Start managing your bookings in minutes.
           </p>
 
-          <form
-            className="flex flex-col gap-5"
-            onSubmit={(e) => e.preventDefault()}
-          >
+          <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
             <Input
               label="Full name"
               type="text"
               variant="stripped"
               placeholder="Jane Doe"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
             />
             <Input
               label="Email"
               type="email"
               variant="stripped"
               placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
             />
             <Input
               label="Password"
               type="password"
               variant="stripped"
               placeholder="Create a password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={8}
             />
-            <Button variant="primary" size="lg" className="mt-2 w-full">
-              Create account
+            {error && (
+              <p className="text-sm font-bold tracking-tight text-red-600">
+                {error}
+              </p>
+            )}
+            <Button
+              variant="primary"
+              size="lg"
+              className="mt-2 w-full"
+              disabled={loading}
+            >
+              {loading ? "Creating account..." : "Create account"}
             </Button>
           </form>
 
@@ -97,14 +163,6 @@ export default function SignUpPage() {
               icon={
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="#171717">
                   <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
-                </svg>
-              }
-            />
-            <SSOButton
-              provider="Apple"
-              icon={
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="#171717">
-                  <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
                 </svg>
               }
             />
