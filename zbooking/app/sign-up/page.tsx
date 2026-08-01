@@ -4,45 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SSOButton } from "@/components/auth/sso-button";
 import { signUp } from "@/app/lib/auth";
-
-function SSOButton({
-  provider,
-  icon,
-}: {
-  provider: string;
-  icon: React.ReactNode;
-}) {
-  const [loading, setLoading] = useState(false);
-
-  async function handleClick() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/auth/sign-in/social", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: provider.toLowerCase() }),
-      });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <button
-      onClick={handleClick}
-      disabled={loading}
-      className="flex h-11 w-full items-center justify-center gap-2 border-2 border-[#171717] bg-white font-sans text-sm font-bold tracking-tight transition-colors hover:bg-[#171717]/5 disabled:opacity-50"
-    >
-      {icon}
-      {provider}
-    </button>
-  );
-}
+import { ROUTES } from "@/app/lib/constants";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -59,7 +23,7 @@ export default function SignUpPage() {
 
     try {
       await signUp({ name, email, password });
-      router.push("/");
+      router.push(ROUTES.DASHBOARD);
     } catch (err: unknown) {
       const authErr = err as { message?: string };
       setError(authErr.message || "Failed to create account");
